@@ -1,0 +1,52 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using System.Management;
+
+namespace processor_id
+{
+    internal class HardwareID
+    {
+        public static string GET_HARDWAREID => ReturnHardwareID().Result;
+        private static async Task<string> ReturnHardwareID()
+        {
+            byte[] bytes;
+            byte[] hashedBytes;
+            StringBuilder sb = new StringBuilder();
+
+            Task task = Task.Run(() =>
+            {
+                ManagementObjectSearcher cpu = new ManagementObjectSearcher("SELECT * FROM Win32_Processor");
+                ManagementObjectCollection cpu_Collection = cpu.Get();
+                
+                foreach (ManagementObject obj in cpu_Collection)
+                {
+                    sb.Append(obj["ProcessorID"].ToString());
+                    break;
+                
+                }
+
+                ManagementObjectSearcher bios = new ManagementObjectSearcher("SELECT * FROM Win32_BIOS");
+                ManagementObjectCollection bios_Collection = bios.Get();
+
+                foreach (ManagementObject obj in bios_Collection)
+                {
+                    sb.Append(obj["Version"].ToString());
+                    break;
+
+                }
+
+            });
+            
+            //Trying to get rid of this. Whenever I delete it the program breaks
+            Task.WaitAll(task);
+            bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+            hashedBytes = System.Security.Cryptography.SHA256.Create().ComputeHash(bytes);
+            return await Task.FromResult(Convert.ToBase64String(hashedBytes).Substring(25));
+
+        }
+    }
+}
